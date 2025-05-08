@@ -20,6 +20,14 @@ services:
     depends_on:
       - postgres
       - vault
+  popchain:
+    build: ./popchain
+    ports:
+      - "3002:3002"
+  oracle:
+    build: ./oracle
+    ports:
+      - "3003:3003"
   postgres:
     image: postgres:13
     environment:
@@ -28,6 +36,8 @@ services:
       POSTGRES_DB: humanhash_db
     volumes:
       - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/security_policy.sql:/docker-entrypoint-initdb.d/02-security.sql
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/03-seed.sql
     ports:
       - "5432:5432"
   vault:

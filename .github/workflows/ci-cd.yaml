@@ -1,1 +1,50 @@
-
+Open Ls -a ~/Desktop/humanhash
+name: CI/CD Pipeline
+on:
+  push:
+    branches: [ main ]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    - name: Build and push client
+      run: |
+        cd client
+        docker build -t myrepo/humanhash-client:1.0 .
+        docker push myrepo/humanhash-client:1.0
+    - name: Build and push biometric
+      run: |
+        cd biometric
+        docker build -t myrepo/humanhash-biometric:1.0 .
+        docker push myrepo/humanhash-biometric:1.0
+    - name: Build and push system
+      run: |
+        cd system
+        docker build -t myrepo/humanhash-system:1.0 .
+        docker push myrepo/humanhash-system:1.0
+    - name: Build and push popchain
+      run: |
+        cd popchain
+        docker build -t myrepo/humanhash-popchain:1.0 .
+        docker push myrepo/humanhash-popchain:1.0
+    - name: Build and push oracle
+      run: |
+        cd oracle
+        docker build -t myrepo/humanhash-oracle:1.0 .
+        docker push myrepo/humanhash-oracle:1.0
+    - name: Deploy to Kubernetes
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+      env:
+        KUBECONFIG: ${{ secrets.KUBECONFIG }}
+      run: |
+        helm upgrade --install humanhash ./helm/humanhash

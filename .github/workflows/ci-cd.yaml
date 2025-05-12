@@ -1,50 +1,49 @@
-Open Ls -a ~/Desktop/humanhash
 name: CI/CD Pipeline
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
 jobs:
-  build-and-deploy:
+  build-and-test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: humanhash
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-    - name: Login to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-    - name: Build and push client
-      run: |
-        cd client
-        docker build -t myrepo/humanhash-client:1.0 .
-        docker push myrepo/humanhash-client:1.0
-    - name: Build and push biometric
-      run: |
-        cd biometric
-        docker build -t myrepo/humanhash-biometric:1.0 .
-        docker push myrepo/humanhash-biometric:1.0
-    - name: Build and push system
-      run: |
-        cd system
-        docker build -t myrepo/humanhash-system:1.0 .
-        docker push myrepo/humanhash-system:1.0
-    - name: Build and push popchain
-      run: |
-        cd popchain
-        docker build -t myrepo/humanhash-popchain:1.0 .
-        docker push myrepo/humanhash-popchain:1.0
-    - name: Build and push oracle
-      run: |
-        cd oracle
-        docker build -t myrepo/humanhash-oracle:1.0 .
-        docker push myrepo/humanhash-oracle:1.0
-    - name: Deploy to Kubernetes
-      uses: azure/setup-kubectl@v3
-      with:
-        version: 'latest'
-      env:
-        KUBECONFIG: ${{ secrets.KUBECONFIG }}
-      run: |
-        helm upgrade --install humanhash ./helm/humanhash
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+      - name: Install Node.js dependencies
+        run: npm install
+        working-directory: ./client
+      - name: Run Node.js tests
+        run: npm test
+        working-directory: ./client
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Build Rust code
+        run: cargo build --release
+        working-directory: ./biometric
+      - name: Run Rust tests
+        run: cargo test
+        working-directory: ./biometric
+      - name: Set up Docker
+        uses: docker/setup-buildx-action@v2
+      - name: Build Docker images
+        run: docker-compose build

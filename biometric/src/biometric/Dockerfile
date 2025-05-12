@@ -1,7 +1,5 @@
-FROM node:18
+FROM rust:1.70
 WORKDIR /app
-COPY package.json .
-RUN npm install
 COPY . .
-RUN npm run build
-CMD ["npm", "start"]
+RUN cargo build --release
+CMD ["./target/release/biometric"]

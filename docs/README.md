@@ -22,3 +22,4 @@ Decentralized Proof of Personhood (PoP) system with biometrics, ZKPs, and blockc
 
 ## License
 MIT License
+

@@ -15,8 +15,12 @@ jobs:
         node-version: '18'
     - name: Install Node.js dependencies (client)
       run: |
-        cd client
-        npm install
+        if [ -f client/package.json ]; then
+          cd client
+          npm install
+        else
+          echo "No package.json found in client/, skipping npm install"
+        fi
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
     - name: Login to Docker Hub
@@ -27,13 +31,10 @@ jobs:
     - name: Build and push client
       run: |
         cd client
-        docker build -t pieterbouwer959
-        docker push pieterbouwer959
-
+        docker build -t pieterbouwer959/humanhash-client:1.0 .
+        docker push pieterbouwer959/humanhash-client:1.0
     - name: Build and push biometric
       run: |
         cd biometric
-        docker build -t pieterbouwer959
-
-        docker push pieterbouwer959
-
+        docker build -t pieterbouwer959/humanhash-biometric:1.0 .
+        docker push pieterbouwer959/humanhash-biometric:1.0

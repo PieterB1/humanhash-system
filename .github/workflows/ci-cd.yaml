@@ -27,10 +27,13 @@ jobs:
     - name: Build and push client
       run: |
         cd client
-        docker build -t myrepo/humanhash-client:1.0 .
-        docker push myrepo/humanhash-client:1.0
+        docker build -t pieterbouwer959
+        docker push pieterbouwer959
+
     - name: Build and push biometric
       run: |
         cd biometric
-        docker build -t myrepo/humanhash-biometric:1.0 .
-        docker push myrepo/humanhash-biometric:1.0
+        docker build -t pieterbouwer959
+
+        docker push pieterbouwer959
+

@@ -1,0 +1,50 @@
+version: '3.8'
+services:
+  client:
+    build: ./client
+    ports:
+      - "3000:80"
+    depends_on:
+      - system
+  biometric:
+    build: ./biometric
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - vault
+  system:
+    build: ./system
+    ports:
+      - "3001:3000"
+    depends_on:
+      - postgres
+      - vault
+  popchain:
+    build: ./popchain
+    ports:
+      - "3002:3002"
+  oracle:
+    build: ./oracle
+    ports:
+      - "3003:3003"
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: humanhash_db
+    volumes:
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/security_policy.sql:/docker-entrypoint-initdb.d/02-security.sql
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/03-seed.sql
+    ports:
+      - "5432:5432"
+  vault:
+    image: vault:1.15
+    ports:
+      - "8200:8200"
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: your-vault-token
+    cap_add:
+      - IPC_LOCK

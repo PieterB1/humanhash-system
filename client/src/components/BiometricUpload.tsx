@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { encryptBiometric } from '../utils/crypto.ts';
-import { encryptBiometric } from '../utils/crypto';
+
 
 interface Props {
   token: string;
@@ -42,9 +42,8 @@ const BiometricUpload: React.FC<Props> = ({ token, userId, onResult }) => {
       const response = await axios.post('http://system-api:3000/api/biometric/verify', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          Authorization:'Bearer ${token' ,
-          Authorization: ,
-        },
+          Authorization:'Bearer ${token}' ,
+       },
       });
       onResult(response.data.message);
     } catch (err: any) {

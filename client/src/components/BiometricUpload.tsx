@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { encryptBiometric } from '../utils/crypto.ts';
-
 
 interface Props {
   token: string;
-  userId: number;
   onResult: (result: string) => void;
 }
 
-const BiometricUpload: React.FC<Props> = ({ token, userId, onResult }) => {
+const BiometricUpload: React.FC<Props> = ({ token, onResult }) => {
   const [file, setFile] = useState<File | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,12 +40,12 @@ const BiometricUpload: React.FC<Props> = ({ token, userId, onResult }) => {
       const response = await axios.post('http://system-api:3000/api/biometric/verify', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          Authorization:'Bearer ${token}' ,
-       },
+          Authorization: `Bearer ${token}`,
+        },
       });
       onResult(response.data.message);
-    } catch (err: any) {
-      onResult('Verification failed: ' + err.response?.data.message);
+    } catch (err: AxiosError) {
+      onResult('Verification failed: ' + (err.response?.data?.message || err.message));
     }
   };
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios, { AxiosError } from 'axios';
-import { encryptBiometric } from '../utils/crypto';
+import { encryptBiometric } from '../utils/crypto'; // Removed .ts extension
 
 interface Props {
   token: string;
@@ -21,20 +21,9 @@ const BiometricUpload: React.FC<Props> = ({ token, onResult }) => {
       return;
     }
 
-    // Temporarily disable FaceTecSDK calls
-    /*
-    await FaceTecSDK.initialize();
-    const livenessResult = await FaceTecSDK.performLivenessCheck(file);
-    if (!livenessResult.isLive) {
-      onResult('Liveness check failed');
-      return;
-    }
-    */
-
     const formData = new FormData();
     const encryptedData = encryptBiometric(file.name, 'vault-key');
     formData.append('biometric', file, encryptedData);
-    // formData.append('livenessData', JSON.stringify(livenessResult));
 
     try {
       const response = await axios.post('http://system-api:3000/api/biometric/verify', formData, {
@@ -45,7 +34,6 @@ const BiometricUpload: React.FC<Props> = ({ token, onResult }) => {
       });
       onResult(response.data.message);
     } catch (err) {
-      // Use AxiosError explicitly
       const error = err as AxiosError;
       onResult('Verification failed: ' + (error.response?.data?.message || error.message));
     }

@@ -1,9 +1,10 @@
+Copy
 {
   "env": {
     "browser": true,
     "es2021": true
   },
-  "extends": [
+ x "extends": [
     "eslint:recommended",
     "plugin:react/recommended",
     "plugin:react-hooks/recommended",
@@ -28,3 +29,4 @@
       "version": "detect"
     }
   }
+}

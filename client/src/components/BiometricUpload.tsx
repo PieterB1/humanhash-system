@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios, { AxiosError } from 'axios';
-import { encryptBiometric } from '../utils/crypto.ts';
+import { encryptBiometric } from '../utils/crypto';
 
 interface Props {
   token: string;

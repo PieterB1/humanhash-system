@@ -1,10 +1,16 @@
+Copy
 import React, { useState } from 'react';
 import axios, { AxiosError } from 'axios';
-import { encryptBiometric } from '../utils/crypto'; // Removed .ts extension
+import { encryptBiometric } from '../utils/crypto';
 
 interface Props {
   token: string;
   onResult: (result: string) => void;
+}
+
+// Define the expected shape of the error response data
+interface ErrorResponse {
+  message?: string;
 }
 
 const BiometricUpload: React.FC<Props> = ({ token, onResult }) => {
@@ -34,7 +40,7 @@ const BiometricUpload: React.FC<Props> = ({ token, onResult }) => {
       });
       onResult(response.data.message);
     } catch (err) {
-      const error = err as AxiosError;
+      const error = err as AxiosError<ErrorResponse>;
       onResult('Verification failed: ' + (error.response?.data?.message || error.message));
     }
   };

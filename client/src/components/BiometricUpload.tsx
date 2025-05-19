@@ -44,8 +44,10 @@ const BiometricUpload: React.FC<Props> = ({ token, onResult }) => {
         },
       });
       onResult(response.data.message);
-    } catch (err: AxiosError) {
-      onResult('Verification failed: ' + (err.response?.data?.message || err.message));
+    } catch (err) {
+      // Use AxiosError explicitly
+      const error = err as AxiosError;
+      onResult('Verification failed: ' + (error.response?.data?.message || error.message));
     }
   };
 

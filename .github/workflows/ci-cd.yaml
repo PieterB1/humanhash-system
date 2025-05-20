@@ -8,38 +8,35 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-    - uses: actions/checkout@v3
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-    - name: Install Node.js dependencies (client)
-      run: |
-        if [ -f client/package.json ]; then
-          cd client
-          npm install
-        else
-          echo "No package.json found in client/, skipping npm install"
-        fi
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-    - name: Login to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-    - name: Build and push client
-      run: |
-        cd client
-        docker build -t pieterbouwer959/humanhash-client:1.0 .
-        docker push pieterbouwer959/humanhash-client:1.0
-    - name: Build and push biometric
-      run: |
-        cd biometric
-        docker build -t pieterbouwer959/humanhash-biometric:1.0 .
-        docker push pieterbouwer959/humanhash-biometric:1.0
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install Client Dependencies
+        run: npm install
+        working-directory: client
+      - name: Build Client
+        run: npm run build
+        working-directory: client
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        if: github.event_name == 'push'  # Only run on push, not PR
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+        if: github.event_name == 'push'
+      - name: Build and Push Client Image
+        run: |
+          docker build -t pieterbouwer959/humanhash-client:latest .
+          docker push pieterbouwer959/humanhash-client:latest
+        working-directory: client
+        if: github.event_name == 'push'
+      - name: Build and Push Biometric Image
+        run: |
+          docker build -t pieterbouwer959/humanhash-biometric:latest .
+          docker push pieterbouwer959/humanhash-biometric:latest
+        working-directory: biometric
+        if: github.event_name == 'push'

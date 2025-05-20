@@ -1,0 +1,28 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Build output
+client/build/
+biometric/target/
+
+# macOS
+.DS_Store
+
+# Editor files
+.vscode/
+.idea/
+
+# Temporary files
+*.log
+*.cache
+client/transferring
+client/unpacking
+client/sha256:*
+client/=
+client/[auth]
+client/[internal]
+client/extracting
+client/naming
+client/resolve

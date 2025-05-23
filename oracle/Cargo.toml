@@ -1,5 +1,5 @@
 [package]
-name = "humanhash-biometric"
+name = "humanhash-oracle"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,4 +7,4 @@ edition = "2021"
 actix-web = "4.9.0"
 serde = { version = "1.0", features = ["derive"] }
 chrono = { version = "0.4", features = ["serde"] }
-arkworks = { git = "https://github.com/arkworks-rs/arkworks" }$
+reqwest = { version = "0.12", features = ["json"] }

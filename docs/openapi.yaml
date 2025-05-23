@@ -1,0 +1,153 @@
+openapi: 3.0.3
+info:
+  title: HumanHash API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8000/v1
+paths:
+  /identity/enroll:
+    post:
+      summary: Enroll User for PoP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                biometric_data:
+                  type: string
+                user_id:
+                  type: string
+              required: [biometric_data, user_id]
+      responses:
+        '200':
+          description: Enrollment successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  human_hash:
+                    type: string
+                  proof:
+                    type: string
+                  timestamp:
+                    type: string
+  /identity/verify:
+    post:
+      summary: Verify PoP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                biometric_data:
+                  type: string
+                challenge:
+                  type: string
+              required: [biometric_data, challenge]
+      responses:
+        '200':
+          description: Verification successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  human_hash:
+                    type: string
+                  proof:
+                    type: string
+                  timestamp:
+                    type: string
+  /identity/kyc:
+    post:
+      summary: Perform KYC Verification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                documents:
+                  type: array
+                  items:
+                    type: string
+              required: [user_id, documents]
+      responses:
+        '200':
+          description: KYC result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  details:
+                    type: string
+  /ledger/write:
+    post:
+      summary: Write to Ledger
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: string
+                channel:
+                  type: string
+                  nullable: true
+              required: [data]
+      responses:
+        '200':
+          description: Ledger write successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tx_id:
+                    type: string
+                  merkle_root:
+                    type: string
+                  timestamp:
+                    type: string
+  /billing/pay:
+    post:
+      summary: Process Payment via Lightning
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                amount:
+                  type: string
+              required: [user_id, amount]
+      responses:
+        '200':
+          description: Payment invoice generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  invoice:
+                    type: string

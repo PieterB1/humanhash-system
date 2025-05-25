@@ -1,24 +1,31 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
 use ark_bn254::{Bn254, Fr};
-use ark_ff::PrimeField;
-use ark_groth16::{Groth16, ProvingKey, VerifyingKey};
-use ark_snark::SNARK;
-use ark_std::rand::thread_rng;
-use arkworks_gadgets::mimc::MiMC;
+use ark_groth16::Groth16;
+use ark_std::rand::{rngs::StdRng, SeedableRng};
+use arkworks_mimc::MiMC; // Corrected import
+use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use lazy_static::lazy_static;
-use log::{error, info};
+use log::{info, error};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
-use std::collections::HashMap;
-use std::sync::Mutex;
 
-#[derive(Deserialize)]
+lazy_static! {
+    static ref PROVING_KEY: ark_groth16::ProvingKey<Bn254> = {
+        // Placeholder: Load or generate proving key
+        todo!("Load proving key")
+    };
+    static ref VERIFYING_KEY: ark_groth16::VerifyingKey<Bn254> = {
+        // Placeholder: Load or generate verifying key
+        todo!("Load verifying key")
+    };
+}
+
+#[derive(Deserialize, Serialize, Debug)] // Added Debug
 struct EnrollRequest {
     user_id: String,
     biometric_data: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Debug)] // Added Debug
 struct VerifyRequest {
     biometric_data: String,
     challenge: String,
@@ -38,68 +45,66 @@ struct VerifyResponse {
 }
 
 struct BiometricCircuit {
-    biometric: Fr,
+    biometric_data: Fr,
     hash: Fr,
 }
 
-impl ark_relations::r1cs::ConstraintSynthesizer<Fr> for BiometricCircuit {
+impl ConstraintSynthesizer<Fr> for BiometricCircuit {
     fn generate_constraints(
         self,
-        cs: ark_relations::r1cs::ConstraintSystemRef<Fr>,
-    ) -> ark_relations::r1cs::Result<()> {
-        let mimc = MiMC::<Fr>::new(91, 220, vec![Fr::from(0u8); 220]);
-        let biometric_var = cs.new_input_variable(|| Ok(self.biometric))?;
-        let hash_var = cs.new_witness_variable(|| Ok(self.hash))?;
-        let computed_hash = mimc.mimc(cs.clone(), &[biometric_var], None)?;
+        cs: ConstraintSystemRef<Fr>,
+    ) -> Result<(), SynthesisError> {
+        let biometric_var = cs.new_input_variable(|| Ok(self.biometric_data))?;
+        let hash_var = cs.new_input_variable(|| Ok(self.hash))?;
+        let computed_hash = cs.new_witness_variable(|| Ok(self.biometric_data))?;
+
         cs.enforce_constraint(
-            ark_relations::r1cs::lc!() + hash_var,
-            ark_relations::r1cs::lc!() + (Fr::from(1u8), ark_relations::r1cs::Variable::One),
-            ark_relations::r1cs::lc!() + computed_hash,
+            lc!() + hash_var,
+            lc!() + (Fr::from(1u8), ark_relations::r1cs::Variable::One),
+            lc!() + computed_hash,
         )?;
+
         Ok(())
     }
-}
-
-lazy_static! {
-    static ref STORAGE: Mutex<HashMap<String, Fr>> = Mutex::new(HashMap::new());
-    static ref PROVING_KEY: ProvingKey<Bn254> = {
-        let rng = &mut thread_rng();
-        let circuit = BiometricCircuit {
-            biometric: Fr::from(0u8),
-            hash: Fr::from(0u8),
-        };
-        let (pk, _) = Groth16::<Bn254>::circuit_specific_setup(circuit, rng).unwrap();
-        pk
-    };
-    static ref VERIFYING_KEY: VerifyingKey<Bn254> = {
-        let rng = &mut thread_rng();
-        let circuit = BiometricCircuit {
-            biometric: Fr::from(0u8),
-            hash: Fr::from(0u8),
-        };
-        let (_, vk) = Groth16::<Bn254>::circuit_specific_setup(circuit, rng).unwrap();
-        vk
-    };
 }
 
 #[post("/enroll")]
 async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
     info!("Received /enroll request: {:?}", req);
-    let biometric = match Fr::from_str(&req.biometric_data) {
-        Ok(b) => b,
+    let biometric = match req.biometric_data.parse::<u64>() {
+        Ok(val) => Fr::from(val),
         Err(e) => {
-            error!("Invalid biometric data: {}", e);
-            return HttpResponse::BadRequest().json(json!({
+            error!("Invalid biometric data format: {}", e);
+            return HttpResponse::BadRequest().json(serde_json::json!({
                 "error": "Invalid biometric data format"
             }));
         }
     };
 
-    let mut storage = STORAGE.lock().unwrap();
-    storage.insert(req.user_id.clone(), biometric);
+    let circuit = BiometricCircuit {
+        biometric_data: biometric,
+        hash: biometric, // Placeholder
+    };
 
+    let mut rng = StdRng::seed_from_u64(0); // Use StdRng
+    let proof = match Groth16::<Bn254>::create_random_proof_with_reduction(
+        circuit,
+        &PROVING_KEY,
+        &mut rng,
+    ) {
+        Ok(proof) => proof,
+        Err(e) => {
+            error!("Proof generation failed: {}", e);
+            return HttpResponse::InternalServerError().json(serde_json::json!({
+                "error": "Proof generation failed"
+            }));
+        }
+    };
+
+    // Store proof (placeholder)
+    let human_hash = "blue-whale".to_string();
     HttpResponse::Ok().json(EnrollResponse {
-        human_hash: "blue-whale".to_string(),
+        human_hash,
         status: "enrolled".to_string(),
         timestamp: chrono::Utc::now().to_rfc3339(),
     })
@@ -108,42 +113,45 @@ async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
 #[post("/verify")]
 async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
     info!("Received /verify request: {:?}", req);
-    let biometric = match Fr::from_str(&req.biometric_data) {
-        Ok(b) => b,
+    let biometric = match req.biometric_data.parse::<u64>() {
+        Ok(val) => Fr::from(val),
         Err(e) => {
-            error!("Invalid biometric data: {}", e);
-            return HttpResponse::BadRequest().json(json!({
+            error!("Invalid biometric data format: {}", e);
+            return HttpResponse::BadRequest().json(serde_json::json!({
                 "error": "Invalid biometric data format"
             }));
         }
     };
 
-    let stored_hash = STORAGE.lock().unwrap().values().next().cloned().unwrap_or(Fr::from(0u8));
     let circuit = BiometricCircuit {
-        biometric,
-        hash: stored_hash,
+        biometric_data: biometric,
+        hash: biometric, // Placeholder
     };
 
-    let rng = &mut thread_rng();
-    let proof = match Groth16::<Bn254>::prove(&PROVING_KEY, circuit, rng) {
-        Ok(p) => p,
+    let mut rng = StdRng::seed_from_u64(0);
+    let proof = match Groth16::<Bn254>::create_random_proof_with_reduction(
+        circuit,
+        &PROVING_KEY,
+        &mut rng,
+    ) {
+        Ok(proof) => proof,
         Err(e) => {
             error!("Proof generation failed: {}", e);
-            return HttpResponse::InternalServerError().json(json!({
+            return HttpResponse::InternalServerError().json(serde_json::json!({
                 "error": "Proof generation failed"
             }));
         }
     };
 
-    let is_valid = Groth16::<Bn254>::verify(&VERIFYING_KEY, &[stored_hash], &proof).unwrap_or(false);
-    if !is_valid {
-        return HttpResponse::Unauthorized().json(json!({
-            "error": "Verification failed"
-        }));
-    }
+    let stored_hash = biometric; // Placeholder
+    let is_valid = Groth16::<Bn254>::verify_with_processed_vk(
+        &VERIFYING_KEY,
+        &[stored_hash],
+        &proof,
+    ).unwrap_or(false);
 
     HttpResponse::Ok().json(VerifyResponse {
-        status: "verified".to_string(),
+        status: if is_valid { "verified" } else { "failed" }.to_string(),
         timestamp: chrono::Utc::now().to_rfc3339(),
     })
 }
@@ -151,16 +159,12 @@ async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
-    info!("Attempting to start server on 127.0.0.1:8080");
     HttpServer::new(|| {
         App::new()
             .service(enroll)
             .service(verify)
     })
-    .workers(1)
     .bind("127.0.0.1:8080")?
     .run()
-    .await?;
-    info!("Server bound successfully");
-    Ok(())
+    .await
 }

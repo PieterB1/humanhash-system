@@ -1,0 +1,77 @@
+use actix_web::{post, web, App, HttpResponse, HttpServer};
+use serde::{Deserialize, Serialize};
+use chrono::Utc;
+use log::{info, error};
+use ark_bn254::Bn254;
+use ark_groth16::Proof;
+
+async fn validate_biometric(_data: &str) -> bool {
+    info!("Called validate_biometric");
+    true
+}
+
+async fn generate_human_hash(_data: &str) -> Option<String> {
+    info!("Called generate_human_hash");
+    Some("blue-whale".to_string())
+}
+
+async fn store_enrollment(_user_id: &str, _human_hash: &str) -> Option<()> {
+    info!("Called store_enrollment");
+    Some(())
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct EnrollRequest {
+    user_id: String,
+    biometric_data: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct VerifyRequest {
+    biometric_data: String,
+    challenge: String,
+}
+
+#[post("/enroll")]
+async fn enroll(req: web::Json<EnrollRequest>) -> HttpResponse {
+    info!("Received /enroll request: {:?}", req);
+    let human_hash = generate_human_hash(&req.biometric_data).await.unwrap_or("blue-whale".to_string());
+    store_enrollment(&req.user_id, &human_hash).await;
+    HttpResponse::Ok().json(serde_json::json!({
+        "status": "enrolled",
+        "human_hash": human_hash,
+        "timestamp": Utc::now()
+    }))
+}
+
+#[post("/verify")]
+async fn verify(req: web::Json<VerifyRequest>) -> HttpResponse {
+    info!("Received /verify request: {:?}", req);
+    let is_valid = validate_biometric(&req.biometric_data).await;
+    HttpResponse::Ok().json(serde_json::json!({
+        "status": if is_valid { "verified" } else { "failed" },
+        "timestamp": Utc::now()
+    }))
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    env_logger::init();
+    info!("Attempting to start server on 127.0.0.1:8080");
+    let server = HttpServer::new(|| {
+        App::new()
+            .service(enroll)
+            .service(verify)
+    })
+    .bind("127.0.0.1:8080");
+    match server {
+        Ok(server) => {
+            info!("Server bound successfully");
+            server.run().await
+        }
+        Err(e) => {
+            error!("Failed to bind server: {}", e);
+            Err(e)
+        }
+    }
+}

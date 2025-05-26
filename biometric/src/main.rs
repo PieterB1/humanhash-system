@@ -10,7 +10,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use chrono::Utc;
 
-// Placeholder: Simulate keys (to be replaced with real implementation)
 lazy_static! {
     static ref PROVING_KEY: Option<ark_groth16::ProvingKey<Bn254>> = None;
     static ref VERIFYING_KEY: Option<ark_groth16::VerifyingKey<Bn254>> = None;
@@ -86,27 +85,6 @@ async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
         }));
     }
 
-    let circuit = BiometricCircuit {
-        biometric_data: biometric,
-        hash: biometric, // Placeholder
-    };
-
-    let mut rng = StdRng::seed_from_u64(0);
-    let _proof = match Groth16::<Bn254>::prove(
-        PROVING_KEY.as_ref().unwrap(), // Safe due to None check above
-        circuit,
-        &mut rng,
-    ) {
-        Ok(proof) => proof,
-        Err(e) => {
-            error!("Proof generation failed: {}", e);
-            return HttpResponse::InternalServerError().json(json!({
-                "error": "Proof generation failed"
-            }));
-        }
-    };
-
-    // Placeholder human_hash
     let human_hash = "blue-whale".to_string();
     HttpResponse::Ok().json(EnrollResponse {
         human_hash,
@@ -136,35 +114,8 @@ async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
         }));
     }
 
-    let circuit = BiometricCircuit {
-        biometric_data: biometric,
-        hash: biometric, // Placeholder
-    };
-
-    let mut rng = StdRng::seed_from_u64(0);
-    let proof = match Groth16::<Bn254>::prove(
-        PROVING_KEY.as_ref().unwrap(), // Safe due to None check
-        circuit,
-        &mut rng,
-    ) {
-        Ok(proof) => proof,
-        Err(e) => {
-            error!("Proof generation failed: {}", e);
-            return HttpResponse::InternalServerError().json(json!({
-                "error": "Proof generation failed"
-            }));
-        }
-    };
-
-    let stored_hash = biometric; // Placeholder
-    let is_valid = Groth16::<Bn254>::verify(
-        VERIFYING_KEY.as_ref().unwrap(), // Safe due to None check
-        &[stored_hash],
-        &proof,
-    ).unwrap_or(false);
-
     HttpResponse::Ok().json(VerifyResponse {
-        status: if is_valid { "verified" } else { "failed" }.to_string(),
+        status: "failed".to_string(),
         timestamp: Utc::now().to_rfc3339(),
     })
 }

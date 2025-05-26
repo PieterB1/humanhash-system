@@ -1,12 +1,14 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
 use ark_bn254::{Bn254, Fr};
 use ark_groth16::Groth16;
-use ark_crypto_primitives::snark::SNARK; // Corrected SNARK import
+use ark_crypto_primitives::snark::SNARK;
 use ark_std::rand::{rngs::StdRng, SeedableRng};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError, Variable, LinearCombination};
 use lazy_static::lazy_static;
 use log::{info, error};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
+use chrono::Utc;
 
 lazy_static! {
     static ref PROVING_KEY: ark_groth16::ProvingKey<Bn254> = {
@@ -54,7 +56,7 @@ impl ConstraintSynthesizer<Fr> for BiometricCircuit {
         self,
         cs: ConstraintSystemRef<Fr>,
     ) -> Result<(), SynthesisError> {
-        let biometric_var = cs.new_input_variable(|| Ok(self.biometric_data))?;
+        let _biometric_var = cs.new_input_variable(|| Ok(self.biometric_data))?;
         let hash_var = cs.new_input_variable(|| Ok(self.hash))?;
         let computed_hash = cs.new_witness_variable(|| Ok(self.biometric_data))?;
 
@@ -76,7 +78,7 @@ async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
         Ok(val) => Fr::from(val),
         Err(e) => {
             error!("Invalid biometric data format: {}", e);
-            return HttpResponse::BadRequest().json(serde_json::json!({
+            return HttpResponse::BadRequest().json(json!({
                 "error": "Invalid biometric data format"
             }));
         }
@@ -88,7 +90,7 @@ async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
     };
 
     let mut rng = StdRng::seed_from_u64(0);
-    let proof = match Groth16::<Bn254>::prove(
+    let _proof = match Groth16::<Bn254>::prove(
         &PROVING_KEY,
         circuit,
         &mut rng,
@@ -96,7 +98,7 @@ async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
         Ok(proof) => proof,
         Err(e) => {
             error!("Proof generation failed: {}", e);
-            return HttpResponse::InternalServerError().json(serde_json::json!({
+            return HttpResponse::InternalServerError().json(json!({
                 "error": "Proof generation failed"
             }));
         }
@@ -107,7 +109,7 @@ async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
     HttpResponse::Ok().json(EnrollResponse {
         human_hash,
         status: "enrolled".to_string(),
-        timestamp: chrono::Utc::now().to_rfc3339(),
+        timestamp: Utc::now().to_rfc3339(),
     })
 }
 
@@ -118,7 +120,7 @@ async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
         Ok(val) => Fr::from(val),
         Err(e) => {
             error!("Invalid biometric data format: {}", e);
-            return HttpResponse::BadRequest().json(serde_json::json!({
+            return HttpResponse::BadRequest().json(json!({
                 "error": "Invalid biometric data format"
             }));
         }
@@ -138,7 +140,7 @@ async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
         Ok(proof) => proof,
         Err(e) => {
             error!("Proof generation failed: {}", e);
-            return HttpResponse::InternalServerError().json(serde_json::json!({
+            return HttpResponse::InternalServerError().json(json!({
                 "error": "Proof generation failed"
             }));
         }
@@ -153,7 +155,7 @@ async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
 
     HttpResponse::Ok().json(VerifyResponse {
         status: if is_valid { "verified" } else { "failed" }.to_string(),
-        timestamp: chrono::Utc::now().to_rfc3339(),
+        timestamp: Utc::now().to_rfc3339(),
     })
 }
 

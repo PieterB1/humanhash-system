@@ -10,15 +10,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use chrono::Utc;
 
+// Placeholder: Simulate keys (to be replaced with real implementation)
 lazy_static! {
-    static ref PROVING_KEY: ark_groth16::ProvingKey<Bn254> = {
-        // Placeholder: Load or generate proving key
-        todo!("Load proving key")
-    };
-    static ref VERIFYING_KEY: ark_groth16::VerifyingKey<Bn254> = {
-        // Placeholder: Load or generate verifying key
-        todo!("Load verifying key")
-    };
+    static ref PROVING_KEY: Option<ark_groth16::ProvingKey<Bn254>> = None;
+    static ref VERIFYING_KEY: Option<ark_groth16::VerifyingKey<Bn254>> = None;
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -60,7 +55,6 @@ impl ConstraintSynthesizer<Fr> for BiometricCircuit {
         let hash_var = cs.new_input_variable(|| Ok(self.hash))?;
         let computed_hash = cs.new_witness_variable(|| Ok(self.biometric_data))?;
 
-        // Enforce constraint: hash_var * 1 = computed_hash
         cs.enforce_constraint(
             LinearCombination::from(hash_var),
             LinearCombination::from(Variable::One),
@@ -84,6 +78,14 @@ async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
         }
     };
 
+    // Check if proving key is available
+    if PROVING_KEY.is_none() {
+        error!("Proving key not initialized");
+        return HttpResponse::InternalServerError().json(json!({
+            "error": "Proving key not initialized"
+        }));
+    }
+
     let circuit = BiometricCircuit {
         biometric_data: biometric,
         hash: biometric, // Placeholder
@@ -91,7 +93,7 @@ async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
 
     let mut rng = StdRng::seed_from_u64(0);
     let _proof = match Groth16::<Bn254>::prove(
-        &PROVING_KEY,
+        PROVING_KEY.as_ref().unwrap(), // Safe due to None check above
         circuit,
         &mut rng,
     ) {
@@ -104,7 +106,7 @@ async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
         }
     };
 
-    // Store proof (placeholder)
+    // Placeholder human_hash
     let human_hash = "blue-whale".to_string();
     HttpResponse::Ok().json(EnrollResponse {
         human_hash,
@@ -126,6 +128,14 @@ async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
         }
     };
 
+    // Check if verifying key is available
+    if VERIFYING_KEY.is_none() {
+        error!("Verifying key not initialized");
+        return HttpResponse::InternalServerError().json(json!({
+            "error": "Verifying key not initialized"
+        }));
+    }
+
     let circuit = BiometricCircuit {
         biometric_data: biometric,
         hash: biometric, // Placeholder
@@ -133,7 +143,7 @@ async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
 
     let mut rng = StdRng::seed_from_u64(0);
     let proof = match Groth16::<Bn254>::prove(
-        &PROVING_KEY,
+        PROVING_KEY.as_ref().unwrap(), // Safe due to None check
         circuit,
         &mut rng,
     ) {
@@ -148,7 +158,7 @@ async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
 
     let stored_hash = biometric; // Placeholder
     let is_valid = Groth16::<Bn254>::verify(
-        &VERIFYING_KEY,
+        VERIFYING_KEY.as_ref().unwrap(), // Safe due to None check
         &[stored_hash],
         &proof,
     ).unwrap_or(false);

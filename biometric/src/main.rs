@@ -68,11 +68,24 @@ impl ConstraintSynthesizer<Fr> for BiometricCircuit {
 async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
     info!("Received /enroll request: {:?}", req);
     let biometric = match req.biometric_data.parse::<u64>() {
-        Ok(val) => Fr::from(val),
+        Ok(val) => {
+            info!("Successfully parsed biometric_data: {}", val);
+            match Fr::try_from(val) {
+                Ok(fr) => fr,
+                Err(e) => {
+                    error!("Failed to convert biometric_data to Fr: {:?}", e);
+                    return HttpResponse::InternalServerError().json(json!({
+                        "error": "Invalid biometric field element",
+                        "details": format!("Conversion error: {:?}", e)
+                    }));
+                }
+            }
+        },
         Err(e) => {
-            error!("Invalid biometric data format: {}", e);
+            error!("Invalid biometric data format: {:?}", e);
             return HttpResponse::BadRequest().json(json!({
-                "error": "Invalid biometric data format"
+                "error": "Invalid biometric data format",
+                "details": format!("Parse error: {:?}", e)
             }));
         }
     };
@@ -85,6 +98,7 @@ async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
         }));
     }
 
+    info!("Generating enroll response for user_id: {}", req.user_id);
     let human_hash = "blue-whale".to_string();
     HttpResponse::Ok().json(EnrollResponse {
         human_hash,
@@ -97,11 +111,24 @@ async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
 async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
     info!("Received /verify request: {:?}", req);
     let biometric = match req.biometric_data.parse::<u64>() {
-        Ok(val) => Fr::from(val),
+        Ok(val) => {
+            info!("Successfully parsed biometric_data: {}", val);
+            match Fr::try_from(val) {
+                Ok(fr) => fr,
+                Err(e) => {
+                    error!("Failed to convert biometric_data to Fr: {:?}", e);
+                    return HttpResponse::InternalServerError().json(json!({
+                        "error": "Invalid biometric field element",
+                        "details": format!("Conversion error: {:?}", e)
+                    }));
+                }
+            }
+        },
         Err(e) => {
-            error!("Invalid biometric data format: {}", e);
+            error!("Invalid biometric data format: {:?}", e);
             return HttpResponse::BadRequest().json(json!({
-                "error": "Invalid biometric data format"
+                "error": "Invalid biometric data format",
+                "details": format!("Parse error: {:?}", e)
             }));
         }
     };
@@ -114,6 +141,7 @@ async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
         }));
     }
 
+    info!("Generating verify response for challenge: {}", req.challenge);
     HttpResponse::Ok().json(VerifyResponse {
         status: "failed".to_string(),
         timestamp: Utc::now().to_rfc3339(),
@@ -123,12 +151,21 @@ async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init();
+    info!("Starting Actix web server");
     HttpServer::new(|| {
         App::new()
             .service(enroll)
             .service(verify)
     })
-    .bind("127.0.0.1:8080")?
+    .bind("127.0.0.1:8080")
+    .map_err(|e| {
+        error!("Failed to bind server: {:?}", e);
+        e
+    })?
     .run()
     .await
+    .map_err(|e| {
+        error!("Server run failed: {:?}", e);
+        e
+    })
 }

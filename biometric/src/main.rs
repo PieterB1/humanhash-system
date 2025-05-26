@@ -1,8 +1,9 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
 use ark_bn254::{Bn254, Fr};
-use ark_groth16::{Groth16, SNARK}; // Added SNARK trait
+use ark_groth16::Groth16;
+use ark_crypto_primitives::snark::SNARK; // Corrected SNARK import
 use ark_std::rand::{rngs::StdRng, SeedableRng};
-use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
+use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError, Variable, LinearCombination};
 use lazy_static::lazy_static;
 use log::{info, error};
 use serde::{Deserialize, Serialize};
@@ -59,9 +60,9 @@ impl ConstraintSynthesizer<Fr> for BiometricCircuit {
 
         // Enforce constraint: hash_var * 1 = computed_hash
         cs.enforce_constraint(
-            hash_var,
-            cs.new_input_variable(|| Ok(Fr::from(1u8)))?,
-            computed_hash,
+            LinearCombination::from(hash_var),
+            LinearCombination::from(Variable::One),
+            LinearCombination::from(computed_hash),
         )?;
 
         Ok(())

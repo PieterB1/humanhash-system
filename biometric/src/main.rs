@@ -1,8 +1,7 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
 use ark_bn254::{Bn254, Fr};
-use ark_groth16::Groth16;
+use ark_groth16::{Groth16, SNARK}; // Added SNARK trait
 use ark_std::rand::{rngs::StdRng, SeedableRng};
-use arkworks_mimc::MiMC; // Corrected import
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError};
 use lazy_static::lazy_static;
 use log::{info, error};
@@ -19,13 +18,13 @@ lazy_static! {
     };
 }
 
-#[derive(Deserialize, Serialize, Debug)] // Added Debug
+#[derive(Deserialize, Serialize, Debug)]
 struct EnrollRequest {
     user_id: String,
     biometric_data: String,
 }
 
-#[derive(Deserialize, Serialize, Debug)] // Added Debug
+#[derive(Deserialize, Serialize, Debug)]
 struct VerifyRequest {
     biometric_data: String,
     challenge: String,
@@ -58,10 +57,11 @@ impl ConstraintSynthesizer<Fr> for BiometricCircuit {
         let hash_var = cs.new_input_variable(|| Ok(self.hash))?;
         let computed_hash = cs.new_witness_variable(|| Ok(self.biometric_data))?;
 
+        // Enforce constraint: hash_var * 1 = computed_hash
         cs.enforce_constraint(
-            lc!() + hash_var,
-            lc!() + (Fr::from(1u8), ark_relations::r1cs::Variable::One),
-            lc!() + computed_hash,
+            hash_var,
+            cs.new_input_variable(|| Ok(Fr::from(1u8)))?,
+            computed_hash,
         )?;
 
         Ok(())
@@ -86,10 +86,10 @@ async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
         hash: biometric, // Placeholder
     };
 
-    let mut rng = StdRng::seed_from_u64(0); // Use StdRng
-    let proof = match Groth16::<Bn254>::create_random_proof_with_reduction(
-        circuit,
+    let mut rng = StdRng::seed_from_u64(0);
+    let proof = match Groth16::<Bn254>::prove(
         &PROVING_KEY,
+        circuit,
         &mut rng,
     ) {
         Ok(proof) => proof,
@@ -129,9 +129,9 @@ async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
     };
 
     let mut rng = StdRng::seed_from_u64(0);
-    let proof = match Groth16::<Bn254>::create_random_proof_with_reduction(
-        circuit,
+    let proof = match Groth16::<Bn254>::prove(
         &PROVING_KEY,
+        circuit,
         &mut rng,
     ) {
         Ok(proof) => proof,
@@ -144,7 +144,7 @@ async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
     };
 
     let stored_hash = biometric; // Placeholder
-    let is_valid = Groth16::<Bn254>::verify_with_processed_vk(
+    let is_valid = Groth16::<Bn254>::verify(
         &VERIFYING_KEY,
         &[stored_hash],
         &proof,

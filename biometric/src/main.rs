@@ -9,6 +9,7 @@ use log::{info, error};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use chrono::Utc;
+use std::io::Write; // For log flushing
 
 lazy_static! {
     static ref PROVING_KEY: Option<ark_groth16::ProvingKey<Bn254>> = None;
@@ -66,6 +67,8 @@ impl ConstraintSynthesizer<Fr> for BiometricCircuit {
 
 #[post("/enroll")]
 async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
+    // Flush logs to ensure they are written
+    std::io::stderr().flush().ok();
     info!("Received /enroll request: {:?}", req);
     let biometric = match req.biometric_data.parse::<u64>() {
         Ok(val) => {
@@ -74,6 +77,7 @@ async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
                 Ok(fr) => fr,
                 Err(e) => {
                     error!("Failed to convert biometric_data to Fr: {:?}", e);
+                    std::io::stderr().flush().ok();
                     return HttpResponse::InternalServerError().json(json!({
                         "error": "Invalid biometric field element",
                         "details": format!("Conversion error: {:?}", e)
@@ -83,6 +87,7 @@ async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
         },
         Err(e) => {
             error!("Invalid biometric data format: {:?}", e);
+            std::io::stderr().flush().ok();
             return HttpResponse::BadRequest().json(json!({
                 "error": "Invalid biometric data format",
                 "details": format!("Parse error: {:?}", e)
@@ -93,12 +98,14 @@ async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
     // Check if proving key is available
     if PROVING_KEY.is_none() {
         error!("Proving key not initialized");
+        std::io::stderr().flush().ok();
         return HttpResponse::InternalServerError().json(json!({
             "error": "Proving key not initialized"
         }));
     }
 
     info!("Generating enroll response for user_id: {}", req.user_id);
+    std::io::stderr().flush().ok();
     let human_hash = "blue-whale".to_string();
     HttpResponse::Ok().json(EnrollResponse {
         human_hash,
@@ -109,6 +116,8 @@ async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
 
 #[post("/verify")]
 async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
+    // Flush logs to ensure they are written
+    std::io::stderr().flush().ok();
     info!("Received /verify request: {:?}", req);
     let biometric = match req.biometric_data.parse::<u64>() {
         Ok(val) => {
@@ -117,6 +126,7 @@ async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
                 Ok(fr) => fr,
                 Err(e) => {
                     error!("Failed to convert biometric_data to Fr: {:?}", e);
+                    std::io::stderr().flush().ok();
                     return HttpResponse::InternalServerError().json(json!({
                         "error": "Invalid biometric field element",
                         "details": format!("Conversion error: {:?}", e)
@@ -126,6 +136,7 @@ async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
         },
         Err(e) => {
             error!("Invalid biometric data format: {:?}", e);
+            std::io::stderr().flush().ok();
             return HttpResponse::BadRequest().json(json!({
                 "error": "Invalid biometric data format",
                 "details": format!("Parse error: {:?}", e)
@@ -136,12 +147,14 @@ async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
     // Check if verifying key is available
     if VERIFYING_KEY.is_none() {
         error!("Verifying key not initialized");
+        std::io::stderr().flush().ok();
         return HttpResponse::InternalServerError().json(json!({
             "error": "Verifying key not initialized"
         }));
     }
 
     info!("Generating verify response for challenge: {}", req.challenge);
+    std::io::stderr().flush().ok();
     HttpResponse::Ok().json(VerifyResponse {
         status: "failed".to_string(),
         timestamp: Utc::now().to_rfc3339(),
@@ -152,20 +165,35 @@ async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
 async fn main() -> std::io::Result<()> {
     env_logger::init();
     info!("Starting Actix web server");
+    std::io::stderr().flush().ok();
     HttpServer::new(|| {
         App::new()
+            .app_data(web::JsonConfig::default().error_handler(|err, _req| {
+                error!("JSON deserialization error: {:?}", err);
+                std::io::stderr().flush().ok();
+                actix_web::error::InternalError::from_response(
+                    err,
+                    HttpResponse::BadRequest().json(json!({
+                        "error": "Invalid JSON format",
+                        "details": format!("Deserialization error: {:?}", err)
+                    }))
+                ).into()
+            }))
             .service(enroll)
             .service(verify)
     })
+    .workers(2) // Increase to 2 workers to handle potential worker crashes
     .bind("127.0.0.1:8080")
     .map_err(|e| {
         error!("Failed to bind server: {:?}", e);
+        std::io::stderr().flush().ok();
         e
     })?
     .run()
     .await
     .map_err(|e| {
         error!("Server run failed: {:?}", e);
+        std::io::stderr().flush().ok();
         e
     })
 }

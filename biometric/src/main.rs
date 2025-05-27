@@ -1,8 +1,5 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
 use ark_bn254::{Bn254, Fr};
-use ark_groth16::Groth16;
-use ark_crypto_primitives::snark::SNARK;
-use ark_std::rand::{rngs::StdRng, SeedableRng};
 use ark_relations::r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError, Variable, LinearCombination};
 use lazy_static::lazy_static;
 use log::{info, error};
@@ -70,7 +67,7 @@ async fn enroll(req: web::Json<EnrollRequest>) -> impl Responder {
     // Flush logs to ensure they are written
     std::io::stderr().flush().ok();
     info!("Received /enroll request: {:?}", req);
-    let biometric = match req.biometric_data.parse::<u64>() {
+    let _biometric = match req.biometric_data.parse::<u64>() {
         Ok(val) => {
             info!("Successfully parsed biometric_data: {}", val);
             match Fr::try_from(val) {
@@ -119,7 +116,7 @@ async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
     // Flush logs to ensure they are written
     std::io::stderr().flush().ok();
     info!("Received /verify request: {:?}", req);
-    let biometric = match req.biometric_data.parse::<u64>() {
+    let _biometric = match req.biometric_data.parse::<u64>() {
         Ok(val) => {
             info!("Successfully parsed biometric_data: {}", val);
             match Fr::try_from(val) {
@@ -169,13 +166,14 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
             .app_data(web::JsonConfig::default().error_handler(|err, _req| {
+                let error_message = format!("Deserialization error: {:?}", err);
                 error!("JSON deserialization error: {:?}", err);
                 std::io::stderr().flush().ok();
                 actix_web::error::InternalError::from_response(
                     err,
                     HttpResponse::BadRequest().json(json!({
                         "error": "Invalid JSON format",
-                        "details": format!("Deserialization error: {:?}", err)
+                        "details": error_message
                     }))
                 ).into()
             }))

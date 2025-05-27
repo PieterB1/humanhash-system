@@ -5,7 +5,8 @@ use env_logger::Env;
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::io;
+use std::io::Write;
+use std::panic;
 
 lazy_static::lazy_static! {
     static ref PROVING_KEY: Option<()> = None;
@@ -139,7 +140,13 @@ async fn verify(req: web::Json<VerifyRequest>) -> impl Responder {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::Builder::from_env(Env::default().default_filter_or("debug")).init();
+    // Set panic hook to log panics
+    panic::set_hook(Box::new(|panic_info| {
+        error!("Panic occurred: {:?}", panic_info);
+        std::io::stderr().flush().ok();
+    }));
+
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("debug,humanhash_biometric=debug,actix_web=debug,actix_server=debug")).init();
     info!("Initializing humanhash-biometric server");
     std::io::stderr().flush().ok();
 

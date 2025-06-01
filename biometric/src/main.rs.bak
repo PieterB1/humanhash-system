@@ -1,77 +1,53 @@
-use actix_web::{post, web, App, HttpResponse, HttpServer};
-use serde::{Deserialize, Serialize};
-use chrono::Utc;
-use log::{info, error};
-use ark_bn254::Bn254;
-use ark_groth16::Proof;
+use axum::{routing::get, Router, extract::State};
+use std::net::SocketAddr;
+use tokio::sync::Mutex;
+use tracing::{info, debug, error, trace};
+use tracing_subscriber::fmt;
+use tracing_subscriber::EnvFilter;
+use std::sync::Arc;
 
-async fn validate_biometric(_data: &str) -> bool {
-    info!("Called validate_biometric");
-    true
+#[derive(Clone)]
+struct AppState {
+    request_count: Arc<Mutex<u32>>,
 }
 
-async fn generate_human_hash(_data: &str) -> Option<String> {
-    info!("Called generate_human_hash");
-    Some("blue-whale".to_string())
-}
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    fmt()
+        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("trace")))
+        .with_thread_ids(true)
+        .init();
+    info!("Initializing server");
 
-async fn store_enrollment(_user_id: &str, _human_hash: &str) -> Option<()> {
-    info!("Called store_enrollment");
-    Some(())
-}
+    let state = AppState {
+        request_count: Arc::new(Mutex::new(0)),
+    };
 
-#[derive(Serialize, Deserialize, Debug)]
-struct EnrollRequest {
-    user_id: String,
-    biometric_data: String,
-}
+    let app = Router::new()
+        .route("/test", get(|State(state): State<AppState>| async move {
+            trace!("Received /test request");
+            info!("Handling /test request");
+            debug!("Processing request");
+            let mut count = state.request_count.lock().await;
+            *count += 1;
+            debug!("Request count: {}", *count);
+            let response = "OK";
+            debug!("Sending response: {}", response);
+            trace!("Completed /test request");
+            response
+        }))
+        .with_state(state);
 
-#[derive(Serialize, Deserialize, Debug)]
-struct VerifyRequest {
-    biometric_data: String,
-    challenge: String,
-}
+    let addr = SocketAddr::from(([127, 0, 0, 1], 8081));
+    info!("Binding to {}", addr);
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    info!("Server bound to {}", addr);
 
-#[post("/enroll")]
-async fn enroll(req: web::Json<EnrollRequest>) -> HttpResponse {
-    info!("Received /enroll request: {:?}", req);
-    let human_hash = generate_human_hash(&req.biometric_data).await.unwrap_or("blue-whale".to_string());
-    store_enrollment(&req.user_id, &human_hash).await;
-    HttpResponse::Ok().json(serde_json::json!({
-        "status": "enrolled",
-        "human_hash": human_hash,
-        "timestamp": Utc::now()
-    }))
-}
-
-#[post("/verify")]
-async fn verify(req: web::Json<VerifyRequest>) -> HttpResponse {
-    info!("Received /verify request: {:?}", req);
-    let is_valid = validate_biometric(&req.biometric_data).await;
-    HttpResponse::Ok().json(serde_json::json!({
-        "status": if is_valid { "verified" } else { "failed" },
-        "timestamp": Utc::now()
-    }))
-}
-
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    env_logger::init();
-    info!("Attempting to start server on 127.0.0.1:8080");
-    let server = HttpServer::new(|| {
-        App::new()
-            .service(enroll)
-            .service(verify)
-    })
-    .bind("127.0.0.1:8080");
-    match server {
-        Ok(server) => {
-            info!("Server bound successfully");
-            server.run().await
-        }
-        Err(e) => {
-            error!("Failed to bind server: {}", e);
-            Err(e)
-        }
+    debug!("Starting server loop");
+    if let Err(e) = axum::serve(listener, app.into_make_service()).await {
+        error!("Server error: {:?}", e);
     }
+    info!("Server shutdown complete");
+
+    Ok(())
 }

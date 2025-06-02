@@ -3,3 +3,6 @@ hashes
 hashes.txt
 biometric_hashes.txt
 
+*.bak
+*.bak3
+*.original

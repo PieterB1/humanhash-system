@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kuberay-operator-endpointslices
+rules:
+- apiGroups: ["discovery.k8s.io"]
+  resources: ["endpointslices"]
+  verbs: ["create", "delete", "get", "list", "patch", "update", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kuberay-operator-endpointslices-binding
+subjects:
+- kind: ServiceAccount
+  name: kuberay-operator
+  namespace: kuberay
+roleRef:
+  kind: ClusterRole
+  name: kuberay-operator-endpointslices
+  apiGroup: rbac.authorization.k8s.io

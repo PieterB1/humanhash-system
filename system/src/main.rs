@@ -1,4 +1,4 @@
-use axum::{routing::post, Json, Router};
+use axum::{routing::post, Json, Router, Server};
    use serde::{Deserialize, Serialize};
    use sha2::{Digest, Sha256};
    use uuid::Uuid;
@@ -70,7 +70,7 @@ use axum::{routing::post, Json, Router};
            .route("/identity/verify", post(verify_proof));
        
        info!("Starting system service on 0.0.0.0:8081");
-       axum::Server::bind(&"0.0.0.0:8081".parse().unwrap())
+       Server::bind(&"0.0.0.0:8081".parse().unwrap())
            .serve(app.into_make_service())
            .await
            .unwrap();

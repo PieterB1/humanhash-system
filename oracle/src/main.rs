@@ -1,5 +1,5 @@
-use axum::{routing::post, Json, Router};
-   use reqwest::blocking::get;
+use axum::{routing::post, Json, Router, Server};
+   use reqwest::blocking::Client;
    use serde::{Deserialize, Serialize};
    use sha2::{Digest, Sha256};
    use uuid::Uuid;
@@ -32,7 +32,9 @@ use axum::{routing::post, Json, Router};
        };
        
        // Query sureBits API (placeholder endpoint)
-       let response = get("https://surebits.oracle/api/feed")
+       let client = Client::new();
+       let response = client
+           .get("https://surebits.oracle/api/feed")
            .query(&[("user_id", &req.user_id)])
            .send()
            .map_err(|e| {
@@ -84,7 +86,7 @@ use axum::{routing::post, Json, Router};
            .route("/oracle/kyc", post(kyc_oracle));
        
        info!("Starting oracle service on 0.0.0.0:3003");
-       axum::Server::bind(&"0.0.0.0:3003".parse().unwrap())
+       Server::bind(&"0.0.0.0:3003".parse().unwrap())
            .serve(app.into_make_service())
            .await
            .unwrap();

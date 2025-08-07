@@ -1,5 +1,4 @@
-use axum::{routing::post, Json, Router};
-   use reqwest::blocking::get;
+use axum::{routing::post, Json, Router, Server};
    use serde::{Deserialize, Serialize};
    use sha2::{Digest, Sha256};
    use uuid::Uuid;
@@ -9,20 +8,22 @@ use axum::{routing::post, Json, Router};
    use tracing_subscriber::{fmt, EnvFilter};
 
    #[derive(Serialize, Deserialize)]
-   struct OracleRequest {
-       user_id: String,
+   struct BiometricData {
+       face_scan: Vec<u8>,
+       session_id: String,
    }
 
    #[derive(Serialize, Deserialize)]
-   struct OracleResponse {
-       status: String,
+   struct EnrollmentResult {
+       human_hash_id: String,
+       proof: String,
        sequence_code: String,
    }
 
-   async fn kyc_oracle(Json(req): Json<OracleRequest>) -> Json<OracleResponse> {
-       info!("Processing KYC oracle request for user_id: {}", req.user_id);
+   async fn enroll_biometric(Json(data): Json<BiometricData>) -> Json<EnrollmentResult> {
+       info!("Processing enrollment for session_id: {}", data.session_id);
        
-       // Load Bitcoin wallet data for sureBits
+       // Load Bitcoin wallet data
        let wallet_data = match fs::read("/Users/pieterwjbouwer/bitcoin/testnet3/wallets/testwallet/wallet.dat") {
            Ok(data) => data,
            Err(e) => {
@@ -31,37 +32,40 @@ use axum::{routing::post, Json, Router};
            }
        };
        
-       // Query sureBits API (placeholder endpoint)
-       let response = get("https://surebits.oracle/api/feed")
-           .query(&[("user_id", &req.user_id)])
-           .send()
-           .map_err(|e| {
-               error!("sureBits error: {}", e);
-               format!("sureBits error: {}", e)
-           })
-           .and_then(|r| r.text().map_err(|e| {
-               error!("sureBits response error: {}", e);
-               format!("sureBits response error: {}", e)
-           }))
-           .unwrap_or("Error".to_string());
+       // Process biometric data with FaceTec/MegaMatcher (simplified)
+       let processed_data = process_biometric(data.face_scan.clone());
+       
+       // Placeholder for BitSNARK proof generation
+       let proof = generate_mock_proof(&processed_data);
+       
+       // Commit to PoPChain (simplified)
+       let human_hash_id = commit_to_popchain(&proof);
        
        // Generate unique sequence code
-       let sequence_code = generate_sequence_code("QUERY");
+       let sequence_code = generate_sequence_code("ENR");
        
-       // Log to PoPChain
-       log_to_popchain(&response, &sequence_code);
+       info!("Enrollment successful, human_hash_id: {}, sequence_code: {}", human_hash_id, sequence_code);
        
-       info!("KYC oracle response: {}, sequence_code: {}", response, sequence_code);
-       
-       Json(OracleResponse {
-           status: response,
+       Json(EnrollmentResult {
+           human_hash_id,
+           proof,
            sequence_code,
        })
    }
 
-   fn log_to_popchain(data: &str, sequence_code: &str) {
-       // Placeholder for PoPChain logging
-       println!("Logged to PoPChain: data={}, sequence_code={}", data, sequence_code);
+   fn process_biometric(data: Vec<u8>) -> Vec<u8> {
+       // Placeholder for FaceTec/MegaMatcher processing
+       data
+   }
+
+   fn generate_mock_proof(data: &[u8]) -> String {
+       // Mock zk-SNARK proof generation
+       format!("mock_proof_{}", hex::encode(data))
+   }
+
+   fn commit_to_popchain(proof: &str) -> String {
+       // Placeholder for PoPChain commitment
+       format!("0x{}", hex::encode(proof))
    }
 
    fn generate_sequence_code(action: &str) -> String {
@@ -81,10 +85,10 @@ use axum::{routing::post, Json, Router};
            .init();
        
        let app = Router::new()
-           .route("/oracle/kyc", post(kyc_oracle));
+           .route("/identity/enroll", post(enroll_biometric));
        
-       info!("Starting oracle service on 0.0.0.0:3003");
-       axum::Server::bind(&"0.0.0.0:3003".parse().unwrap())
+       info!("Starting biometric service on 0.0.0.0:8080");
+       Server::bind(&"0.0.0.0:8080".parse().unwrap())
            .serve(app.into_make_service())
            .await
            .unwrap();

@@ -1,14 +1,79 @@
-use actix_web::{get, App, HttpResponse, HttpServer};
+use axum::{routing::post, Json, Router};
+   use bitsnark_lib::{verify_snark, VerifyingKey};
+   use serde::{Deserialize, Serialize};
+   use sha2::{Digest, Sha256};
+   use uuid::Uuid;
+   use chrono::Utc;
+   use tracing::{info, error};
+   use tracing_subscriber::{fmt, EnvFilter};
 
-#[get("/health")]
-async fn health() -> HttpResponse {
-    HttpResponse::Ok().body("System service running")
-}
+   #[derive(Serialize, Deserialize)]
+   struct Proof {
+       proof: String,
+   }
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| App::new().service(health))
-        .bind("0.0.0.0:3000")?
-        .run()
-        .await
-}
+   #[derive(Serialize, Deserialize)]
+   struct VerificationResult {
+       verified: bool,
+       sequence_code: String,
+   }
+
+   async fn verify_proof(Json(proof): Json<Proof>) -> Json<VerificationResult> {
+       info!("Verifying proof: {}", proof.proof);
+       
+       let verifying_key = match VerifyingKey::load() {
+           Ok(key) => key,
+           Err(e) => {
+               error!("Failed to load verifying key: {}", e);
+               panic!("Failed to load verifying key");
+           }
+       };
+       let is_valid = verify_snark(&proof.proof, &verifying_key);
+       
+       // Generate unique sequence code
+       let sequence_code = generate_sequence_code("VER");
+       
+       // Log to PoPChain (simplified)
+       if is_valid {
+           log_to_popchain(&proof.proof, &sequence_code);
+           info!("Proof verified successfully, sequence_code: {}", sequence_code);
+       } else {
+           error!("Proof verification failed, sequence_code: {}", sequence_code);
+       }
+       
+       Json(VerificationResult {
+           verified: is_valid,
+           sequence_code,
+       })
+   }
+
+   fn log_to_popchain(proof: &str, sequence_code: &str) {
+       // Placeholder for PoPChain logging
+       println!("Logged to PoPChain: proof={}, sequence_code={}", proof, sequence_code);
+   }
+
+   fn generate_sequence_code(action: &str) -> String {
+       let uuid = Uuid::new_v4();
+       let timestamp = Utc::now().timestamp();
+       let mut hasher = Sha256::new();
+       hasher.update(format!("{}{}", uuid, timestamp));
+       let hash = hex::encode(hasher.finalize());
+       format!("TX-{}-{}-{}-{}", action, uuid, timestamp, &hash[..8])
+   }
+
+   #[tokio::main]
+   async fn main() {
+       fmt()
+           .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+           .with_thread_ids(true)
+           .init();
+       
+       let app = Router::new()
+           .route("/identity/verify", post(verify_proof));
+       
+       info!("Starting system service on 0.0.0.0:8081");
+       axum::Server::bind(&"0.0.0.0:8081".parse().unwrap())
+           .serve(app.into_make_service())
+           .await
+           .unwrap();
+   }

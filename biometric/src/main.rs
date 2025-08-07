@@ -1,4 +1,4 @@
-use axum::{routing::post, Json, Router, Server};
+use axum::{routing::post, Json, Router, server::Server};
    use serde::{Deserialize, Serialize};
    use sha2::{Digest, Sha256};
    use uuid::Uuid;
@@ -24,7 +24,7 @@ use axum::{routing::post, Json, Router, Server};
        info!("Processing enrollment for session_id: {}", data.session_id);
        
        // Load Bitcoin wallet data
-       let wallet_data = match fs::read("/Users/pieterwjbouwer/bitcoin/testnet3/wallets/testwallet/wallet.dat") {
+       let _wallet_data = match fs::read("/Users/pieterwjbouwer/bitcoin/testnet3/wallets/testwallet/wallet.dat") {
            Ok(data) => data,
            Err(e) => {
                error!("Failed to read wallet.dat: {}", e);

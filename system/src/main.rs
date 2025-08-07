@@ -1,5 +1,4 @@
 use axum::{routing::post, Json, Router};
-   use bitsnark_lib::{verify_snark, VerifyingKey};
    use serde::{Deserialize, Serialize};
    use sha2::{Digest, Sha256};
    use uuid::Uuid;
@@ -21,14 +20,8 @@ use axum::{routing::post, Json, Router};
    async fn verify_proof(Json(proof): Json<Proof>) -> Json<VerificationResult> {
        info!("Verifying proof: {}", proof.proof);
        
-       let verifying_key = match VerifyingKey::load() {
-           Ok(key) => key,
-           Err(e) => {
-               error!("Failed to load verifying key: {}", e);
-               panic!("Failed to load verifying key");
-           }
-       };
-       let is_valid = verify_snark(&proof.proof, &verifying_key);
+       // Placeholder for BitSNARK proof verification
+       let is_valid = verify_mock_proof(&proof.proof);
        
        // Generate unique sequence code
        let sequence_code = generate_sequence_code("VER");
@@ -45,6 +38,11 @@ use axum::{routing::post, Json, Router};
            verified: is_valid,
            sequence_code,
        })
+   }
+
+   fn verify_mock_proof(proof: &str) -> bool {
+       // Mock zk-SNARK proof verification
+       proof.starts_with("mock_proof_")
    }
 
    fn log_to_popchain(proof: &str, sequence_code: &str) {

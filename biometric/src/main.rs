@@ -1,9 +1,10 @@
-use axum::{routing::post, Json, Router, Server};
+use axum::{routing::post, Json, Router};
    use serde::{Deserialize, Serialize};
    use sha2::{Digest, Sha256};
    use uuid::Uuid;
    use chrono::Utc;
    use std::fs;
+   use std::net::SocketAddr;
    use tracing::{info, error};
    use tracing_subscriber::{fmt, EnvFilter};
 
@@ -87,9 +88,9 @@ use axum::{routing::post, Json, Router, Server};
        let app = Router::new()
            .route("/identity/enroll", post(enroll_biometric));
        
-       info!("Starting biometric service on 0.0.0.0:8080");
-       Server::bind(&"0.0.0.0:8080".parse().unwrap())
-           .serve(app.into_make_service())
+       let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
+       info!("Starting biometric service on {}", addr);
+       axum::serve(tokio::net::TcpListener::bind(addr).await.unwrap(), app)
            .await
            .unwrap();
    }

@@ -1,10 +1,11 @@
-use axum::{routing::post, Json, Router, Server};
+use axum::{routing::post, Json, Router};
    use reqwest::blocking::Client;
    use serde::{Deserialize, Serialize};
    use sha2::{Digest, Sha256};
    use uuid::Uuid;
    use chrono::Utc;
    use std::fs;
+   use std::net::SocketAddr;
    use tracing::{info, error};
    use tracing_subscriber::{fmt, EnvFilter};
 
@@ -85,9 +86,9 @@ use axum::{routing::post, Json, Router, Server};
        let app = Router::new()
            .route("/oracle/kyc", post(kyc_oracle));
        
-       info!("Starting oracle service on 0.0.0.0:3003");
-       Server::bind(&"0.0.0.0:3003".parse().unwrap())
-           .serve(app.into_make_service())
+       let addr = SocketAddr::from(([0, 0, 0, 0], 3003));
+       info!("Starting oracle service on {}", addr);
+       axum::serve(tokio::net::TcpListener::bind(addr).await.unwrap(), app)
            .await
            .unwrap();
    }

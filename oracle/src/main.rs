@@ -23,7 +23,7 @@ use axum::{routing::post, Json, Router, Server};
        info!("Processing KYC oracle request for user_id: {}", req.user_id);
        
        // Load Bitcoin wallet data for sureBits
-       let wallet_data = match fs::read("/Users/pieterwjbouwer/bitcoin/testnet3/wallets/testwallet/wallet.dat") {
+       let _wallet_data = match fs::read("/Users/pieterwjbouwer/bitcoin/testnet3/wallets/testwallet/wallet.dat") {
            Ok(data) => data,
            Err(e) => {
                error!("Failed to read wallet.dat: {}", e);

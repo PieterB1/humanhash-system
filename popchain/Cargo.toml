@@ -1,12 +1,19 @@
 [package]
-name = "humanhash-popchain"
+name = "popchain"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-actix-web = "4.9.0"
+axum = "0.6.20"
+hyper = { version = "1.4", features = ["server"] }
 serde = { version = "1.0", features = ["derive"] }
-chrono = { version = "0.4", features = ["serde"] }
-bitcoin = "0.31.1"
-rust-lightning = { git = "https://github.com/rust-lightning/rust-lightning", branch = "main" }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+reqwest = { version = "0.11", features = ["json"] }
+hex = "0.4"
 rand = "0.8"
+sha2 = "0.10"
+
+[[bin]]
+name = "test_lnd"
+path = "test_lnd.rs"

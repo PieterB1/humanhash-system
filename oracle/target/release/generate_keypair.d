@@ -1,0 +1,1 @@
+/Volumes/PortableSSD\ -\ Data/Humanhash-system/Humanhash-system/oracle/target/release/generate_keypair: /Volumes/PortableSSD\ -\ Data/Humanhash-system/Humanhash-system/oracle/src/bin/generate_keypair.rs

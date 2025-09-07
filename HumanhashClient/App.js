@@ -36,7 +36,7 @@ export default function App() {
 
   return (
     <LinearGradient colors={['#FFFFFF', '#E6F0FA']} style={styles.container}>
-      <Text style={styles.title}>Humanhash Client</Text>
+      <Text style={styles.title}>HumanHash Client</Text>
       <TextInput
         style={styles.input}
         placeholder="Human Hash ID"

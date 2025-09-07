@@ -3,7 +3,8 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
-    "start": "expo start",
+    "start": "EXPO_ROUTER_APP_ROOT=/Volumes/PortableSSD\\ -\\ Data/Humanhash-system/Humanhash-system/HumanhashClient expo start"
+},
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
@@ -15,6 +16,7 @@
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
+    "dotenv": "^17.2.2",
     "expo": "~53.0.22",
     "expo-blur": "~14.1.5",
     "expo-constants": "~17.1.7",

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "HumanhashClient",
-    "slug": "HumanhashClient",
+    "name": "HumanHashClient",
+    "slug": "HumanHashClient",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/humanhash-logo.png",

@@ -34,3 +34,5 @@ client/[internal]
 client/extracting
 client/naming
 client/resolve
+humanhash.code-workspace
+main

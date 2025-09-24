@@ -32,7 +32,7 @@ const BiometricUpload: React.FC<Props> = ({ token, userId, onResult }) => {
     formData.append('userId', userId.toString()); // Include userId in API request
 
     try {
-      const response = await axios.post('http://system-api:3000/api/biometric/verify', formData, {
+      const response = await axios.post('http://system-api:3001/api/biometric/verify', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${token}`,

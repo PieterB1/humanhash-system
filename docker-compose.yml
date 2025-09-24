@@ -1,4 +1,4 @@
-version: '3.8'
+
 services:
   client:
     build: ./client
@@ -41,10 +41,10 @@ services:
     ports:
       - "5432:5432"
   vault:
-    image: vault:1.15
+    image: hashicorp/vault:latest
     ports:
       - "8200:8200"
     environment:
-      VAULT_DEV_ROOT_TOKEN_ID: your-vault-token
+      VAULT_DEV_ROOT_TOKEN_ID: root
     cap_add:
       - IPC_LOCK

@@ -1,0 +1,31 @@
+use actix_web::{App, HttpResponse, HttpServer, web};
+use log::{info, trace, error};
+use env_logger;
+use std::io;
+
+#[actix_web::main]
+async fn main() -> io::Result<()> {
+    env_logger::init_from_env(env_logger::Env::default().default_filter_or("info,actix_web=trace,actix_server=trace,humanhash_biometric=trace"));
+    trace!("Initializing server");
+    info!("Starting Actix-web server");
+    trace!("Configuring HttpServer");
+    HttpServer::new(|| {
+        trace!("Configuring App");
+        App::new().route("/test", web::get().to(|| async {
+            trace!("Handling /test request");
+            match std::panic::catch_unwind(|| {
+                HttpResponse::Ok().body("OK")
+            }) {
+                Ok(response) => response,
+                Err(e) => {
+                    error!("Panic in /test handler: {:?}", e);
+                    HttpResponse::InternalServerError().body("Server error")
+                }
+            }
+        }))
+    })
+    .bind(("127.0.0.1", 8080))?
+    .workers(1)
+    .run()
+    .await
+}

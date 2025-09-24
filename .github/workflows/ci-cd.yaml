@@ -1,42 +1,52 @@
-name: CI/CD Pipeline
+name: CI for HumanHash
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
 jobs:
-  build-and-deploy:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      - name: Install Client Dependencies
-        run: npm install
-        working-directory: client
-      - name: Build Client
-        run: npm run build
-        working-directory: client
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        if: github.event_name == 'push'
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-        if: github.event_name == 'push'
-      - name: Build and Push Client Image
-        run: |
-          docker build -t pieterbouwer959/humanhash-client:latest .
-          docker push pieterbouwer959/humanhash-client:latest
-        working-directory: client
-        if: github.event_name == 'push'
-      - name: Build and Push Biometric Image
-        run: |
-          docker build -t pieterbouwer959/humanhash-biometric:latest .
-          docker push pieterbouwer959/humanhash-biometric:latest
-        working-directory: biometric
-        if: github.event_name == 'push'
+    - uses: actions/checkout@v4
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: 1.80.1
+        override: true
+    - name: Build Rust Services
+      run: |
+        cd biometric && cargo build --release
+        cd system && cargo build --release
+        cd popchain && cargo build --release
+        cd oracle && cargo build --release
+    - name: Test Rust Services
+      run: |
+        cd biometric && cargo test
+        cd system && cargo test
+        cd popchain && cargo test
+        cd oracle && cargo test
+    - name: Build Client
+      run: cd client && npm install && npm run build
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      if: github.event_name == 'push'
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v3
+      if: github.event_name == 'push'
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    - name: Build and Push Docker Images
+      if: github.event_name == 'push'
+      run: |
+        docker build -t pieterbouwer959/humanhash:latest -f biometric/Dockerfile biometric
+        docker build -t pieterbouwer959/humanhash-client:latest -f client/Dockerfile client
+        docker build -t pieterbouwer959/humanhash-system:latest -f system/Dockerfile system
+        docker build -t pieterbouwer959/humanhash-popchain:latest -f popchain/Dockerfile popchain
+        docker build -t pieterbouwer959/humanhash-oracle:latest -f oracle/Dockerfile oracle
+        docker push pieterbouwer959/humanhash:latest
+        docker push pieterbouwer959/humanhash-client:latest
+        docker push pieterbouwer959/humanhash-system:latest
+        docker push pieterbouwer959/humanhash-popchain:latest
+        docker push pieterbouwer959/humanhash-oracle:latest

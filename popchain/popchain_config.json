@@ -1,0 +1,7 @@
+{
+  "lnd_host": "https://localhost:8081",
+  "lnd_macaroon_path": "/Users/pieterwjbouwer/lnd-test/data/chain/bitcoin/testnet/admin.macaroon",
+  "lnd_tls_cert_path": "/Users/pieterwjbouwer/lnd-test/tls.cert",
+  "port": 3002,
+  "ledger_endpoint": "/ledger/write"
+}

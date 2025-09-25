@@ -5,7 +5,8 @@
     "oracle_provider": "HumanhashOracle",
     "api_endpoint": "none",
     "oracle_pubkey": "7a21c766d7c1714d863ae4522ab5227498e13156c2fdc836d6414adcc9c8e72a",
-    "port": 3003,
+    "host": "0.0.0.0",
+    "port": 3005,
     "kyc_endpoint": "/oracle/kyc",
     "payment_endpoint": "/oracle/payment"
 }

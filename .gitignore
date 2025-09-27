@@ -39,3 +39,4 @@ main
 humanhash.code-workspace
 main
 biometric/bitcoin/testnet3/*
+oracle/Cargo.lock.bak

@@ -40,3 +40,5 @@ humanhash.code-workspace
 main
 biometric/bitcoin/testnet3/*
 oracle/Cargo.lock.bak
+lnd-darwin-arm64-v0.17.0-beta/lnd
+biometric/bitcoind_logs.txt

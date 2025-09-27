@@ -226,9 +226,10 @@ async fn main() -> Result<()> {
         .route("/health", get(health))
         .with_state(config);
 
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await?;
+    axum::serve(
+        tokio::net::TcpListener::bind(&addr).await?,
+        app.into_make_service()
+    ).await?;
 
     Ok(())
 }

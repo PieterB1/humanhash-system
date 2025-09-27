@@ -1,4 +1,5 @@
 {
+    "host": "0.0.0.0",
     "lnd_host": "https://localhost:10010",
     "lnd_macaroon_path": "/Users/pieterwjbouwer/lnd-test/data/chain/bitcoin/testnet/admin.macaroon",
     "lnd_tls_cert_path": "/Users/pieterwjbouwer/lnd-test/tls.cert",

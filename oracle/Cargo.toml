@@ -4,12 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-axum = "0.6.20"
-hyper = { version = "1.4", features = ["server"] }
-reqwest = { version = "0.11", features = ["json"] }
+axum = "0.7.5"
+tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+reqwest = { version = "0.11", features = ["json"] }
 hex = "0.4"
 secp256k1 = { version = "0.28.2", features = ["rand-std", "serde"] }
 sha2 = "0.10"

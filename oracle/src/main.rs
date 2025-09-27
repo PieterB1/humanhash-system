@@ -56,6 +56,7 @@ struct OracleAttestation {
     dlc_outcome: Option<String>,
 }
 
+<<<<<<< HEAD
 #[derive(Serialize)]
 struct ZkpResponse {
     proof: String,
@@ -124,11 +125,18 @@ async fn pay_invoice(config: &Config, invoice: &str) -> Result<(), StatusCode> {
         };
         println!("Successfully paid invoice: {:?}", json);
         Ok(())
+=======
+async fn attest_ledger_event(data: &str, oracles: Vec<DLCOracle>) -> Option<String> {
+    let valid = futures::future::join_all(oracles.iter().map(|o| verify_signature(&o.pubkey, &o.signature, data))).await.into_iter().filter(|r| *r).count() >= 2;
+    if valid {
+        Some("tx-attested-123".to_string())
+>>>>>>> 33e7a674 (Update port to 3005 and other local changes)
     } else {
         eprintln!("Failed to pay invoice: {}", response.status());
         Err(StatusCode::INTERNAL_SERVER_ERROR)
     }
 }
+<<<<<<< HEAD
 
 async fn kyc(State(config): State<Config>, Json(payload): Json<KycRequest>) -> Result<Json<OracleAttestation>, StatusCode> {
     println!("Received KYC request for user: {}", payload.human_hash_id);
@@ -188,6 +196,12 @@ async fn kyc(State(config): State<Config>, Json(payload): Json<KycRequest>) -> R
         dlc_outcome: Some(outcome),
     };
     Ok(Json(attestation))
+=======
+#[derive(Deserialize)]
+struct KYCRequest {
+    user_id: String,
+    documents: Vec<String>,
+>>>>>>> 33e7a674 (Update port to 3005 and other local changes)
 }
 
 async fn zkp(State(config): State<Config>, Json(payload): Json<KycRequest>) -> Result<Json<ZkpResponse>, StatusCode> {
@@ -276,6 +290,7 @@ async fn health() -> Json<HealthResponse> {
     })
 }
 
+<<<<<<< HEAD
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config: Config = serde_json::from_str(
@@ -294,4 +309,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .serve(app.into_make_service())
         .await?;
     Ok(())
+=======
+#[post("/billing/pay")]
+async fn process_payment(req: web::Json<PaymentRequest>) -> HttpResponse {
+    let oracles = vec![
+    DLCOracle { pubkey: "surebits_key".to_string(), signature: fetch_surebits_signature(&req.user_id).await.unwrap_or_default() },
+    DLCOracle { pubkey: "chainlink_key".to_string(), signature: fetch_chainlink_signature(&req.user_id).await.unwrap_or_default() },
+];
+    let dlc = attest_ledger_event(&req.amount, oracles).await.unwrap_or("dlc-123".to_string());
+    let invoice = generate_lightning_invoice(&req.amount, &dlc).await.unwrap_or_default();
+    HttpResponse::Ok().json(PaymentResponse { invoice })
+}
+
+#[get("/health")]
+async fn health() -> HttpResponse {
+    HttpResponse::Ok().body("Oracle service running")
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    HttpServer::new(|| {
+        App::new()
+            .service(verify_kyc)
+            .service(process_payment)
+            .service(health)
+    })
+    .bind("0.0.0.0:3005")?
+    .run()
+    .await
+>>>>>>> 33e7a674 (Update port to 3005 and other local changes)
 }

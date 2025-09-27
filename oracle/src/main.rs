@@ -40,6 +40,11 @@ struct VerifyZkpRequest {
 }
 
 #[derive(Serialize)]
+struct HealthResponse {
+    status: String,
+}
+
+#[derive(Serialize)]
 struct OracleAttestation {
     oracle_id: String,
     provider: String,
@@ -200,7 +205,7 @@ async fn payment_handler(State(config): State<Config>, Json(_payload): Json<serd
     }
 }
 
-async fn health() -> (StatusCode, Json<HealthResponse>) {
+async fn health(State(_config): State<Config>) -> (StatusCode, Json<HealthResponse>) {
     (StatusCode::OK, Json(HealthResponse { status: "healthy".to_string() }))
 }
 
